@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Выбор эксперта - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Выберите эксперта</h2>
+</div>
+
+<div class="container">
+    <p class="text-center mb-20">Выберите эксперта, который будет помогать вам в обучении</p>
+    
+    <div class="experts-grid">
+        {% for expert in experts %}
+        <div class="expert-card" data-expert-id="{{ expert.id }}">
+            <div class="expert-avatar">
+                {% if expert.avatar_url and expert.avatar_url.startswith('uploads/') %}
+                <img src="{{ url_for('uploaded_file', filename=expert.avatar_url.replace('uploads/', '')) }}" alt="{{ expert.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                {% else %}
+                {{ expert.name[0] }}
+                {% endif %}
+            </div>
+            <h3>{{ expert.name }}</h3>
+            <p style="font-size: 14px; color: var(--text-secondary);">{{ expert.description[:100] }}...</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.expert-card').forEach(card => {
+        card.addEventListener('click', async function() {
+            const expertId = this.dataset.expertId;
+            
+            showLoading();
+            try {
+                const response = await fetch(`/select_expert/${expertId}`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+                const result = await response.json();
+                hideLoading();
+                
+                if (result.success) {
+                    window.location.href = result.redirect;
+                } else {
+                    showNotification('Ошибка выбора эксперта', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showNotification('Ошибка соединения', 'error');
+            }
+        });
+    });
+</script>
+{% endblock %}
+

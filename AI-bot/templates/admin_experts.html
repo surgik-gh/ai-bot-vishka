@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Управление экспертами - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="{{ url_for('main') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Назад
+    </a>
+    <h2>Управление экспертами</h2>
+    <div></div>
+</div>
+
+<div class="container">
+    <div class="card mb-20">
+        <h3 class="card-title">Создать эксперта</h3>
+        <form id="addExpertForm">
+            <div class="form-group">
+                <label class="form-label">Имя эксперта</label>
+                <input type="text" class="form-input" name="name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Описание (для генерации промпта и аватара)</label>
+                <textarea class="form-textarea" name="description" required placeholder="Опишите эксперта, его специализацию, стиль общения..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Создать эксперта</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Список экспертов</h3>
+        <div class="experts-grid">
+            {% for expert in experts %}
+            <div class="expert-card">
+                <div class="expert-avatar">
+                    {% if expert.avatar_url and expert.avatar_url.startswith('uploads/') %}
+                    <img src="{{ url_for('uploaded_file', filename=expert.avatar_url.replace('uploads/', '')) }}" alt="{{ expert.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                    {% else %}
+                    {{ expert.name[0] }}
+                    {% endif %}
+                </div>
+                <h3>{{ expert.name }}</h3>
+                <p style="font-size: 14px; color: var(--text-secondary);">{{ expert.description[:100] }}...</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('addExpertForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData);
+        
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("admin_experts") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Эксперт создан', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Ошибка создания эксперта', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Настройки</h2>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h3 class="card-title">Тема оформления</h3>
+        <div class="theme-selector">
+            <div class="theme-btn light active" data-theme="light" title="Светлая"></div>
+            <div class="theme-btn dark" data-theme="dark" title="Темная"></div>
+            <div class="theme-btn base" data-theme="base" title="Базовая"></div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <ul class="settings-list">
+            <li class="settings-item">
+                <span>Обратная связь</span>
+                <a href="mailto:example@gmail.com" style="color: var(--accent);">example@gmail.com</a>
+            </li>
+            <li class="settings-item">
+                <span>Выход из аккаунта</span>
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="padding: 8px 16px;">Выйти</a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const theme = this.dataset.theme;
+            
+            // Update UI
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Save theme
+            setTheme(theme);
+            
+            // Update on server
+            try {
+                await fetch('{{ url_for("change_theme") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({theme: theme})
+                });
+            } catch (error) {
+                console.error('Error saving theme:', error);
+            }
+        });
+    });
+    
+    // Set active theme on load
+    const currentTheme = getTheme();
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        if (btn.dataset.theme === currentTheme) {
+            btn.classList.add('active');
+        }
+    });
+</script>
+{% endblock %}
+
