@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Настройки</h2>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h3 class="card-title">Тема оформления</h3>
+        <div class="theme-selector">
+            <div class="theme-btn light active" data-theme="light" title="Светлая"></div>
+            <div class="theme-btn dark" data-theme="dark" title="Темная"></div>
+            <div class="theme-btn base" data-theme="base" title="Базовая"></div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Смена пароля</h3>
+        <form id="changePasswordForm">
+            <div class="form-group">
+                <label class="form-label">Текущий пароль</label>
+                <input type="password" class="form-input" name="current_password" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Новый пароль</label>
+                <input type="password" class="form-input" name="new_password" required minlength="6">
+                <small style="color: var(--text-secondary); font-size: 12px;">Минимум 6 символов</small>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Подтвердите новый пароль</label>
+                <input type="password" class="form-input" name="confirm_password" required minlength="6">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Изменить пароль</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <ul class="settings-list">
+            <li class="settings-item">
+                <span>Обратная связь</span>
+                <a href="mailto:example@gmail.com" style="color: var(--accent);">example@gmail.com</a>
+            </li>
+            <li class="settings-item">
+                <span>Выход из аккаунта</span>
+                <a href="{{ url_for('logout') }}" class="btn btn-secondary" style="padding: 8px 16px;">Выйти</a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const theme = this.dataset.theme;
+            
+            // Update UI
+            document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            // Save theme
+            setTheme(theme);
+            
+            // Update on server
+            try {
+                await fetch('{{ url_for("change_theme") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    credentials: 'include',
+                    body: JSON.stringify({theme: theme})
+                });
+            } catch (error) {
+                console.error('Error saving theme:', error);
+            }
+        });
+    });
+    
+    // Set active theme on load
+    const currentTheme = getTheme();
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+        if (btn.dataset.theme === currentTheme) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Смена пароля
+    document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const currentPassword = formData.get('current_password');
+        const newPassword = formData.get('new_password');
+        const confirmPassword = formData.get('confirm_password');
+        
+        if (newPassword !== confirmPassword) {
+            showNotification('Новые пароли не совпадают', 'error');
+            return;
+        }
+        
+        if (newPassword.length < 6) {
+            showNotification('Пароль должен быть не менее 6 символов', 'error');
+            return;
+        }
+        
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("change_password") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword
+                })
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Пароль успешно изменен', 'success');
+                e.target.reset();
+            } else {
+                showNotification(result.message || 'Ошибка смены пароля', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+</script>
+{% endblock %}
+

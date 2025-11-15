@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Достижения - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Достижения</h2>
+</div>
+
+<div class="container">
+    {% if current_user.role != 'administrator' %}
+    <div class="card mb-20 daily-reward-card">
+        <h3 class="card-title" style="display: flex; align-items: center; gap: 10px;">
+            <img src="{{ url_for('static', filename='icons/gift.svg') }}" alt="Подарок" class="reward-icon">
+            Ежедневная награда
+        </h3>
+        <p style="color: var(--text-secondary); margin-bottom: 15px; font-size: 14px;">
+            Получите {{ daily_tokens }} токенов каждый день в 14:15 МСК
+        </p>
+        <button id="claimDailyReward" class="btn btn-primary btn-block" style="margin-bottom: 10px;">
+            <span id="rewardButtonText">Получить награду</span>
+        </button>
+        <div id="rewardTimer" style="text-align: center; font-size: 14px; color: var(--text-secondary); margin-top: 10px;">
+            <span id="timerText"></span>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="card">
+        <h3 class="card-title">Достижения</h3>
+        <div class="achievements-grid">
+            {% for achievement in all_achievements %}
+            <div class="achievement-card {% if achievement.id in earned_ids %}earned{% endif %}">
+                <div class="achievement-icon">
+                    {% if achievement.id in earned_ids %}
+                    <img src="{{ url_for('static', filename='icons/trophy.svg') }}" alt="Достижение получено" class="achievement-icon-img">
+                    {% else %}
+                    <img src="{{ url_for('static', filename='icons/lock.svg') }}" alt="Достижение заблокировано" class="achievement-icon-img locked">
+                    {% endif %}
+                </div>
+                <h4>{{ achievement.name }}</h4>
+                <p style="font-size: 12px; color: var(--text-secondary);">{{ achievement.description }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+let rewardTimerInterval = null;
+
+async function updateRewardStatus() {
+    try {
+        const response = await fetch('{{ url_for("daily_reward_status") }}', {
+            credentials: 'include'
+        });
+        const data = await response.json();
+        
+        const button = document.getElementById('claimDailyReward');
+        const buttonText = document.getElementById('rewardButtonText');
+        const timerText = document.getElementById('timerText');
+        
+        if (data.can_claim) {
+            button.disabled = false;
+            button.classList.remove('btn-secondary');
+            button.classList.add('btn-primary');
+            buttonText.textContent = 'Получить награду';
+            timerText.textContent = 'Награда доступна!';
+            timerText.style.color = 'var(--accent)';
+        } else {
+            button.disabled = true;
+            button.classList.remove('btn-primary');
+            button.classList.add('btn-secondary');
+            buttonText.textContent = 'Награда недоступна';
+            
+            if (data.time_until) {
+                updateTimer(data.time_until);
+            } else {
+                timerText.textContent = data.message || 'Награда недоступна';
+            }
+        }
+    } catch (error) {
+        console.error('Error fetching reward status:', error);
+    }
+}
+
+function updateTimer(timeUntil) {
+    const timerText = document.getElementById('timerText');
+    let remainingSeconds = timeUntil.total_seconds;
+    
+    function formatTime() {
+        if (remainingSeconds <= 0) {
+            clearInterval(rewardTimerInterval);
+            updateRewardStatus();
+            return;
+        }
+        
+        const hours = Math.floor(remainingSeconds / 3600);
+        const minutes = Math.floor((remainingSeconds % 3600) / 60);
+        const seconds = remainingSeconds % 60;
+        
+        timerText.textContent = `Следующая награда через: ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        timerText.style.color = 'var(--text-secondary)';
+        
+        remainingSeconds--;
+    }
+    
+    formatTime();
+    
+    if (rewardTimerInterval) {
+        clearInterval(rewardTimerInterval);
+    }
+    
+    rewardTimerInterval = setInterval(formatTime, 1000);
+}
+
+document.getElementById('claimDailyReward').addEventListener('click', async function() {
+    showLoading();
+    try {
+        const response = await fetch('{{ url_for("claim_daily_reward") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include'
+        });
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            // Update token display if it exists
+            const tokenDisplay = document.getElementById('tokens-count');
+            if (tokenDisplay) {
+                tokenDisplay.textContent = result.tokens;
+            }
+            updateRewardStatus();
+        } else {
+            showNotification(result.message, 'error');
+            updateRewardStatus();
+        }
+    } catch (error) {
+        hideLoading();
+        showNotification('Ошибка соединения', 'error');
+    }
+});
+
+// Initial load
+updateRewardStatus();
+</script>
+{% endblock %}
+

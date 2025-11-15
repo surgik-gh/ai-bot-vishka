@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Профиль</h2>
+</div>
+
+<div class="container">
+    <div class="profile-header">
+        {% if current_user.expert %}
+        <div class="profile-avatar">
+            {% if current_user.expert.avatar_url and current_user.expert.avatar_url.startswith('uploads/') %}
+            <img src="{{ url_for('uploaded_file', filename=current_user.expert.avatar_url.replace('uploads/', '')) }}" alt="{{ current_user.expert.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+            {% else %}
+            {{ current_user.expert.name[0] }}
+            {% endif %}
+        </div>
+        <h3>{{ current_user.expert.name }}</h3>
+        {% else %}
+        <div class="profile-avatar">
+            {{ current_user.first_name[0] }}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="card">
+        <div class="profile-info">
+            <div class="info-item">
+                <span>Имя:</span>
+                <span><strong>{{ current_user.first_name }} {{ current_user.last_name }}</strong></span>
+            </div>
+            <div class="info-item">
+                <span>Email:</span>
+                <span>{{ current_user.email }}</span>
+            </div>
+            <div class="info-item">
+                <span>Роль:</span>
+                <span>
+                    {% if current_user.role == 'student' %}Ученик
+                    {% elif current_user.role == 'teacher' %}Учитель
+                    {% elif current_user.role == 'administrator' %}Администратор
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span>Токены:</span>
+                <span style="color: var(--accent); font-weight: 600;">{{ current_user.tokens }}</span>
+            </div>
+            <div class="info-item">
+                <span>Email подтвержден:</span>
+                <span>
+                    {% if current_user.email_verified %}
+                    <span class="status-badge status-success">
+                        <img src="{{ url_for('static', filename='icons/check.svg') }}" alt="Да" class="status-icon">
+                        Да
+                    </span>
+                    {% else %}
+                    <span class="status-badge status-error">
+                        <img src="{{ url_for('static', filename='icons/x.svg') }}" alt="Нет" class="status-icon">
+                        Нет
+                    </span>
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span>VK привязан:</span>
+                <span>
+                    {% if current_user.vk_id %}
+                    <span class="status-badge status-success">
+                        <img src="{{ url_for('static', filename='icons/check.svg') }}" alt="Да" class="status-icon">
+                        Да
+                    </span>
+                    {% else %}
+                    <span style="color: var(--text-secondary); display: flex; align-items: center; gap: 8px;">
+                        <span>Нет</span>
+                        <button id="linkVkBtn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">Привязать</button>
+                    </span>
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    {% if current_user.role in ['student', 'teacher'] %}
+    <div class="card mt-20">
+        <h3 class="card-title">Выбор аватара (эксперта)</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 15px;">
+            {% if current_user.role == 'student' %}
+            Выберите эксперта, который будет помогать вам в обучении
+            {% else %}
+            Выберите аватар для вашего профиля
+            {% endif %}
+        </p>
+        <div class="form-group">
+            <label class="form-label">Текущий аватар:</label>
+            <select class="form-input" id="expert-selector">
+                <option value="">Не выбран</option>
+                {% for expert in experts %}
+                <option value="{{ expert.id }}" {% if current_user.selected_expert_id == expert.id %}selected{% endif %}>
+                    {{ expert.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button id="changeExpertBtn" class="btn btn-primary btn-block" style="margin-top: 10px;">
+            Изменить аватар
+        </button>
+    </div>
+    {% endif %}
+    
+    {% if current_user.email == 'admin@example.com' %}
+    <div class="card mt-20">
+        <h3 class="card-title">Переключение роли</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 15px;">
+            Вы можете переключиться между ролями для тестирования интерфейса
+        </p>
+        <div class="form-group">
+            <label class="form-label">Выберите роль:</label>
+            <select class="form-input" id="role-switcher">
+                <option value="student" {% if current_user.role == 'student' %}selected{% endif %}>Ученик</option>
+                <option value="teacher" {% if current_user.role == 'teacher' %}selected{% endif %}>Учитель</option>
+                <option value="administrator" {% if current_user.role == 'administrator' %}selected{% endif %}>Администратор</option>
+            </select>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    {% if current_user.email == 'admin@example.com' %}
+    document.getElementById('role-switcher').addEventListener('change', async function() {
+        const role = this.value;
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("switch_role") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({role: role})
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Роль успешно изменена', 'success');
+                setTimeout(() => {
+                    window.location.href = result.redirect;
+                }, 500);
+            } else {
+                showNotification(result.message || 'Ошибка переключения роли', 'error');
+                // Восстановить предыдущее значение
+                this.value = '{{ current_user.role }}';
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+            // Восстановить предыдущее значение
+            this.value = '{{ current_user.role }}';
+        }
+    });
+    {% endif %}
+    
+    {% if not current_user.vk_id %}
+    document.getElementById('linkVkBtn')?.addEventListener('click', async function() {
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("link_vk") }}', {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                window.location.href = result.redirect;
+            } else {
+                showNotification('Ошибка привязки VK', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+    {% endif %}
+    
+    {% if current_user.role in ['student', 'teacher'] %}
+    document.getElementById('changeExpertBtn').addEventListener('click', async function() {
+        const expertId = document.getElementById('expert-selector').value;
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("change_expert") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({expert_id: expertId ? parseInt(expertId) : null})
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification(result.message, 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(result.message || 'Ошибка изменения эксперта', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}
+

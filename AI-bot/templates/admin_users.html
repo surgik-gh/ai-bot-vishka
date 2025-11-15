@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Управление пользователями - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="{{ url_for('main') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Назад
+    </a>
+    <h2>Управление пользователями</h2>
+    <div></div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h3 class="card-title">Список пользователей</h3>
+        <div class="users-list">
+            {% for user in users %}
+            <div class="user-item" data-user-id="{{ user.id }}">
+                <div class="user-info">
+                    <div class="user-name">
+                        <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+                        <span class="user-role">{{ user.role }}</span>
+                    </div>
+                    <div class="user-details">
+                        <span class="detail-item">
+                            <img src="{{ url_for('static', filename='icons/mail.svg') }}" alt="Email" class="detail-icon">
+                            {{ user.email }}
+                        </span>
+                        <span class="detail-item">
+                            <img src="{{ url_for('static', filename='icons/token.svg') }}" alt="Токены" class="detail-icon">
+                            {{ user.tokens }} токенов
+                        </span>
+                        <span class="detail-item">
+                            <img src="{{ url_for('static', filename='icons/chart.svg') }}" alt="Рейтинг" class="detail-icon">
+                            Рейтинг: {{ user.rating }}
+                        </span>
+                    </div>
+                    <div class="user-stats">
+                        <span>Викторин: {{ user.total_quizzes }}</span>
+                        <span>Правильных ответов: {{ user.total_correct_answers }}/{{ user.total_answers }}</span>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    {% if user.id != current_user.id %}
+                    <button class="btn btn-danger delete-user" data-id="{{ user.id }}" data-name="{{ user.first_name }} {{ user.last_name }}">
+                        Удалить
+                    </button>
+                    {% else %}
+                    <span style="color: var(--text-secondary); font-size: 12px;">Вы</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.user-item:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.user-role {
+    background: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.user-details {
+    display: flex;
+    gap: 15px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    flex-wrap: wrap;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.detail-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+}
+
+.user-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+}
+
+.user-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+</style>
+
+<script>
+    document.querySelectorAll('.delete-user').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const userId = this.dataset.id;
+            const userName = this.dataset.name;
+            
+            if (!confirm(`Вы уверены, что хотите удалить пользователя "${userName}"?\n\nЭто действие нельзя отменить!`)) {
+                return;
+            }
+            
+            if (!confirm(`ВНИМАНИЕ! Все данные пользователя будут удалены безвозвратно.\n\nПродолжить удаление "${userName}"?`)) {
+                return;
+            }
+            
+            showLoading();
+            try {
+                const response = await fetch(`/api/admin/user/${userId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const result = await response.json();
+                hideLoading();
+                
+                if (result.success) {
+                    showNotification('Пользователь удален', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(result.message || 'Ошибка удаления пользователя', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showNotification('Ошибка соединения', 'error');
+            }
+        });
+    });
+</script>
+{% endblock %}
+
