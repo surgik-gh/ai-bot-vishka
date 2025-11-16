@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Создать тему - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="{{ url_for('settings') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Назад
+    </a>
+    <h2>Создать тему</h2>
+    <div></div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h3 class="card-title">Основная информация</h3>
+        <form id="createThemeForm">
+            <div class="form-group">
+                <label class="form-label">Название темы</label>
+                <input type="text" class="form-input" name="name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Описание</label>
+                <textarea class="form-textarea" name="description"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Цена (0 = бесплатно, 20-300 токенов)</label>
+                <input type="number" class="form-input" name="price" min="0" max="300" value="0" required>
+                <small style="color: var(--text-secondary); font-size: 12px;">При продаже вам будет начислено 80% от цены</small>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Цвета темы</h3>
+        <form id="themeColorsForm">
+            <div class="form-group">
+                <label class="form-label">Фон основной</label>
+                <input type="color" class="form-input" name="bg_primary" value="#ffffff" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Фон вторичный</label>
+                <input type="color" class="form-input" name="bg_secondary" value="#f5f5f5" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Текст основной</label>
+                <input type="color" class="form-input" name="text_primary" value="#1a1a1a" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Текст вторичный</label>
+                <input type="color" class="form-input" name="text_secondary" value="#666666" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Акцент</label>
+                <input type="color" class="form-input" name="accent" value="#007bff" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Акцент (hover)</label>
+                <input type="color" class="form-input" name="accent_hover" value="#0056b3" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Граница</label>
+                <input type="color" class="form-input" name="border" value="#dddddd" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Успех</label>
+                <input type="color" class="form-input" name="success" value="#28a745" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Ошибка</label>
+                <input type="color" class="form-input" name="error" value="#dc3545" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Фон карточки</label>
+                <input type="color" class="form-input" name="card_bg" value="#ffffff" required>
+            </div>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Цвета навигации (опционально)</h3>
+        <form id="navColorsForm">
+            <div class="form-group">
+                <label class="form-label">Главная</label>
+                <input type="color" class="form-input" name="nav_home_color">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Достижения</label>
+                <input type="color" class="form-input" name="nav_achievements_color">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Рейтинг</label>
+                <input type="color" class="form-input" name="nav_leaderboard_color">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Профиль</label>
+                <input type="color" class="form-input" name="nav_profile_color">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Настройки</label>
+                <input type="color" class="form-input" name="nav_settings_color">
+            </div>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Иконки</h3>
+        <div id="iconsContainer">
+            <div class="icon-item" style="margin-bottom: 15px; padding: 15px; border: 1px solid var(--border); border-radius: 8px;">
+                <div class="form-group">
+                    <label class="form-label">Название иконки</label>
+                    <input type="text" class="form-input icon-name" placeholder="Например: Трофей">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Где используется</label>
+                    <input type="text" class="form-input icon-usage" placeholder="Например: Рейтинг, главная страница">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ссылка на SVG иконку</label>
+                    <input type="url" class="form-input icon-url" placeholder="https://example.com/icon.svg">
+                </div>
+                <button type="button" class="btn btn-secondary remove-icon">Удалить</button>
+            </div>
+        </div>
+        <button type="button" class="btn btn-secondary" id="addIconBtn">Добавить иконку</button>
+    </div>
+    
+    <div class="card">
+        <button type="button" class="btn btn-primary btn-block" id="submitThemeBtn">Создать тему и отправить на модерацию</button>
+    </div>
+</div>
+
+<script>
+let iconCounter = 0;
+
+document.getElementById('addIconBtn').addEventListener('click', function() {
+    const container = document.getElementById('iconsContainer');
+    const newIcon = document.createElement('div');
+    newIcon.className = 'icon-item';
+    newIcon.style.cssText = 'margin-bottom: 15px; padding: 15px; border: 1px solid var(--border); border-radius: 8px;';
+    newIcon.innerHTML = `
+        <div class="form-group">
+            <label class="form-label">Название иконки</label>
+            <input type="text" class="form-input icon-name" placeholder="Например: Трофей">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Где используется</label>
+            <input type="text" class="form-input icon-usage" placeholder="Например: Рейтинг, главная страница">
+        </div>
+        <div class="form-group">
+            <label class="form-label">Ссылка на SVG иконку</label>
+            <input type="url" class="form-input icon-url" placeholder="https://example.com/icon.svg">
+        </div>
+        <button type="button" class="btn btn-secondary remove-icon">Удалить</button>
+    `;
+    container.appendChild(newIcon);
+    
+    newIcon.querySelector('.remove-icon').addEventListener('click', function() {
+        newIcon.remove();
+    });
+});
+
+document.querySelectorAll('.remove-icon').forEach(btn => {
+    btn.addEventListener('click', function() {
+        this.closest('.icon-item').remove();
+    });
+});
+
+document.getElementById('submitThemeBtn').addEventListener('click', async function() {
+    const mainForm = document.getElementById('createThemeForm');
+    const colorsForm = document.getElementById('themeColorsForm');
+    const navForm = document.getElementById('navColorsForm');
+    
+    const formData = new FormData(mainForm);
+    const colorsData = new FormData(colorsForm);
+    const navData = new FormData(navForm);
+    
+    const data = {
+        name: formData.get('name'),
+        description: formData.get('description'),
+        price: parseInt(formData.get('price')),
+        bg_primary: colorsData.get('bg_primary'),
+        bg_secondary: colorsData.get('bg_secondary'),
+        text_primary: colorsData.get('text_primary'),
+        text_secondary: colorsData.get('text_secondary'),
+        accent: colorsData.get('accent'),
+        accent_hover: colorsData.get('accent_hover'),
+        border: colorsData.get('border'),
+        success: colorsData.get('success'),
+        error: colorsData.get('error'),
+        card_bg: colorsData.get('card_bg'),
+        nav_home_color: navData.get('nav_home_color') || null,
+        nav_achievements_color: navData.get('nav_achievements_color') || null,
+        nav_leaderboard_color: navData.get('nav_leaderboard_color') || null,
+        nav_profile_color: navData.get('nav_profile_color') || null,
+        nav_settings_color: navData.get('nav_settings_color') || null,
+        icons: []
+    };
+    
+    // Собираем иконки
+    document.querySelectorAll('.icon-item').forEach((item, index) => {
+        const name = item.querySelector('.icon-name').value;
+        const usage = item.querySelector('.icon-usage').value;
+        const url = item.querySelector('.icon-url').value;
+        
+        if (name && usage && url) {
+            data.icons.push({
+                icon_name: name,
+                usage_location: usage,
+                icon_url: url,
+                order: index
+            });
+        }
+    });
+    
+    showLoading();
+    try {
+        const response = await fetch('{{ url_for("create_theme") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify(data)
+        });
+        const result = await response.json();
+        hideLoading();
+        
+        if (result.success) {
+            showNotification(result.message, 'success');
+            setTimeout(() => location.href = '{{ url_for("themes_market") }}', 1500);
+        } else {
+            showNotification(result.message || 'Ошибка создания темы', 'error');
+        }
+    } catch (error) {
+        hideLoading();
+        showNotification('Ошибка соединения', 'error');
+    }
+});
+</script>
+{% endblock %}
+

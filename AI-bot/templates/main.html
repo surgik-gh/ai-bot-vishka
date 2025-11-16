@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Главная</h2>
+    <div class="tokens-display">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        <span id="tokens-count">{{ current_user.tokens }}</span>
+    </div>
+</div>
+
+<div class="container">
+    {% if current_user.role == 'administrator' %}
+    <div class="card mb-20">
+        <h3 class="card-title">Администратор</h3>
+        <a href="{{ url_for('admin_subjects') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Управление предметами</a>
+        <a href="{{ url_for('admin_experts') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Управление экспертами</a>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Управление пользователями</a>
+        <a href="{{ url_for('admin_themes') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Модерация тем</a>
+    </div>
+    {% endif %}
+    
+    {% if current_user.role == 'teacher' %}
+    <div class="card mb-20">
+        <a href="{{ url_for('teacher_create_lesson') }}" class="btn btn-primary btn-block">Создать урок</a>
+    </div>
+    {% endif %}
+    
+    <div class="card">
+        <h3 class="card-title">Выберите предмет</h3>
+        <div class="subjects-grid">
+            {% for subject in subjects %}
+            <div class="subject-card" onclick="window.location.href='{{ url_for('lesson_page', subject_id=subject.id) }}'">
+                <h4>{{ subject.name }}</h4>
+                {% if subject.description %}
+                <p style="font-size: 12px; color: var(--text-secondary);">{{ subject.description[:50] }}...</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

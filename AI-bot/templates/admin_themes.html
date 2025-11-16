@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}Модерация тем - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="{{ url_for('main') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Назад
+    </a>
+    <h2>Модерация тем</h2>
+    <div></div>
+</div>
+
+<div class="container">
+    <div class="card mb-20">
+        <h3 class="card-title">Темы на модерации</h3>
+        {% if pending_themes|length > 0 %}
+        {% for theme in pending_themes %}
+        <div class="card" style="margin-bottom: 15px;">
+            <div class="theme-preview" style="background: linear-gradient(135deg, {{ theme.bg_primary }} 0%, {{ theme.bg_secondary }} 100%); padding: 20px; border-radius: 12px; margin-bottom: 15px;">
+                <h4 style="color: {{ theme.text_primary }};">{{ theme.name }}</h4>
+                {% if theme.description %}
+                <p style="color: {{ theme.text_secondary }}; font-size: 14px;">{{ theme.description }}</p>
+                {% endif %}
+            </div>
+            <div style="margin-bottom: 10px;">
+                <strong>Создатель:</strong> {{ theme.creator.first_name }} {{ theme.creator.last_name }}<br>
+                <strong>Цена:</strong> {% if theme.price == 0 %}Бесплатно{% else %}{{ theme.price }} токенов{% endif %}<br>
+                <strong>Создано:</strong> {{ theme.created_at.strftime('%d.%m.%Y %H:%M') }}
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary approve-theme" data-theme-id="{{ theme.id }}">Одобрить</button>
+                <button class="btn btn-danger reject-theme" data-theme-id="{{ theme.id }}">Отклонить</button>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center; padding: 20px;">Нет тем на модерации</p>
+        {% endif %}
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Одобренные темы</h3>
+        {% if approved_themes|length > 0 %}
+        {% for theme in approved_themes %}
+        <div class="card" style="margin-bottom: 15px;">
+            <div class="theme-preview" style="background: linear-gradient(135deg, {{ theme.bg_primary }} 0%, {{ theme.bg_secondary }} 100%); padding: 20px; border-radius: 12px; margin-bottom: 15px;">
+                <h4 style="color: {{ theme.text_primary }};">{{ theme.name }}</h4>
+            </div>
+            <div>
+                <strong>Одобрено:</strong> {{ theme.approved_at.strftime('%d.%m.%Y %H:%M') if theme.approved_at else 'Неизвестно' }}<br>
+                <strong>Покупок:</strong> {{ theme.purchases|length }}
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <p style="color: var(--text-secondary); text-align: center; padding: 20px;">Нет одобренных тем</p>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.approve-theme').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const themeId = this.dataset.themeId;
+        showLoading();
+        try {
+            const response = await fetch(`/api/admin/theme/${themeId}/approve`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Тема одобрена', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(result.message || 'Ошибка', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+});
+
+document.querySelectorAll('.reject-theme').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const themeId = this.dataset.themeId;
+        if (!confirm('Отклонить тему?')) return;
+        
+        showLoading();
+        try {
+            const response = await fetch(`/api/admin/theme/${themeId}/reject`, {
+                method: 'POST',
+                credentials: 'include'
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Тема отклонена', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(result.message || 'Ошибка', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+});
+</script>
+{% endblock %}
+

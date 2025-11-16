@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Викторина - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Викторина</h2>
+    <div class="tokens-display">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        <span id="tokens-count">{{ current_user.tokens }}</span>
+    </div>
+</div>
+
+<div class="container quiz-container">
+    <div id="explanation-section" class="card mb-20">
+        <h3 class="card-title">Объяснение материала</h3>
+        <div id="explanation-text" style="line-height: 1.6;">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Генерация объяснения...</p>
+            </div>
+        </div>
+        <button id="start-quiz-btn" class="btn btn-primary btn-block mt-20" style="display: none;">Начать викторину</button>
+    </div>
+    
+    <div id="quiz-section" style="display: none;">
+        <div id="questions-container"></div>
+        <button id="submit-quiz-btn" class="btn btn-primary btn-block mt-20">Завершить викторину</button>
+    </div>
+    
+    <div id="results-section" style="display: none;" class="card mt-20">
+        <h3 class="card-title">Результаты</h3>
+        <div id="results-content"></div>
+    </div>
+</div>
+
+<script>
+    const questions = {{ questions|tojson }};
+    const quizId = {{ quiz.id }};
+    let userAnswers = {};
+    let explanation = sessionStorage.getItem('explanation') || 'Объяснение материала готово. Приступаем к викторине!';
+    
+    // Show explanation
+    document.getElementById('explanation-text').innerHTML = `<p>${explanation}</p>`;
+    document.getElementById('start-quiz-btn').style.display = 'block';
+    
+    document.getElementById('start-quiz-btn').addEventListener('click', function() {
+        document.getElementById('explanation-section').style.display = 'none';
+        document.getElementById('quiz-section').style.display = 'block';
+        renderQuestions();
+    });
+    
+    function renderQuestions() {
+        const container = document.getElementById('questions-container');
+        container.innerHTML = '';
+        
+        questions.forEach((question, index) => {
+            const questionCard = document.createElement('div');
+            questionCard.className = 'question-card';
+            questionCard.innerHTML = `
+                <div class="question-text">${index + 1}. ${question.question_text}</div>
+                <div class="question-options" data-question-id="${question.id}" data-question-type="${question.question_type}">
+                    ${renderQuestionOptions(question)}
+                </div>
+            `;
+            container.appendChild(questionCard);
+        });
+    }
+    
+    function renderQuestionOptions(question) {
+        if (question.question_type === 'text') {
+            return `<input type="text" class="form-input answer-input" data-question-id="${question.id}" placeholder="Введите ответ">`;
+        } else if (question.question_type === 'single') {
+            return question.options.map((option, idx) => `
+                <div class="option-item" data-option="${idx}">
+                    <input type="radio" name="question_${question.id}" value="${option}" id="q${question.id}_${idx}">
+                    <label for="q${question.id}_${idx}" style="margin-left: 10px; cursor: pointer;">${option}</label>
+                </div>
+            `).join('');
+        } else if (question.question_type === 'multiple') {
+            return question.options.map((option, idx) => `
+                <div class="option-item" data-option="${idx}">
+                    <input type="checkbox" name="question_${question.id}" value="${option}" id="q${question.id}_${idx}">
+                    <label for="q${question.id}_${idx}" style="margin-left: 10px; cursor: pointer;">${option}</label>
+                </div>
+            `).join('');
+        }
+    }
+    
+    // Handle option clicks
+    document.addEventListener('change', function(e) {
+        if (e.target.type === 'radio' || e.target.type === 'checkbox') {
+            const questionId = e.target.name.replace('question_', '');
+            const questionType = document.querySelector(`[data-question-id="${questionId}"]`).dataset.questionType;
+            
+            if (questionType === 'single') {
+                userAnswers[questionId] = e.target.value;
+            } else if (questionType === 'multiple') {
+                const checkboxes = document.querySelectorAll(`input[name="question_${questionId}"]:checked`);
+                userAnswers[questionId] = Array.from(checkboxes).map(cb => cb.value);
+            }
+        }
+    });
+    
+    // Handle text input
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('answer-input')) {
+            const questionId = e.target.dataset.questionId;
+            userAnswers[questionId] = e.target.value;
+        }
+    });
+    
+    document.getElementById('submit-quiz-btn').addEventListener('click', async function() {
+        if (Object.keys(userAnswers).length !== questions.length) {
+            showNotification('Ответьте на все вопросы', 'error');
+            return;
+        }
+        
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("submit_quiz") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({
+                    quiz_id: quizId,
+                    answers: userAnswers
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                document.getElementById('quiz-section').style.display = 'none';
+                document.getElementById('results-section').style.display = 'block';
+                
+                document.getElementById('results-content').innerHTML = `
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h2>${result.correct_count} из ${result.total_count} правильных ответов</h2>
+                        <p style="color: var(--accent); font-size: 18px; margin-top: 10px;">
+                            Получено токенов: +${result.tokens_earned}
+                        </p>
+                    </div>
+                    <div style="background: var(--bg-secondary); padding: 20px; border-radius: 8px; margin-top: 20px;">
+                        <h4>Итог урока:</h4>
+                        <p style="line-height: 1.6; margin-top: 10px;">${result.summary}</p>
+                    </div>
+                    <a href="{{ url_for('main') }}" class="btn btn-primary btn-block mt-20">Вернуться на главную</a>
+                `;
+                
+                // Update tokens display
+                document.getElementById('tokens-count').textContent = parseInt(document.getElementById('tokens-count').textContent) + result.tokens_earned;
+            } else {
+                showNotification('Ошибка отправки ответов', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}AI Бот{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    {% block extra_css %}{% endblock %}
+    {% if current_user.is_authenticated and current_user.custom_theme_id %}
+    {% set custom_theme = current_user.custom_theme %}
+    {% if custom_theme %}
+    <style>
+        :root[data-theme="custom"] {
+            --bg-primary: {{ custom_theme.bg_primary }};
+            --bg-secondary: {{ custom_theme.bg_secondary }};
+            --bg-tertiary: {{ custom_theme.bg_tertiary or custom_theme.bg_secondary }};
+            --text-primary: {{ custom_theme.text_primary }};
+            --text-secondary: {{ custom_theme.text_secondary }};
+            --accent: {{ custom_theme.accent }};
+            --accent-hover: {{ custom_theme.accent_hover }};
+            --accent-dark: {{ custom_theme.accent_dark or custom_theme.accent }};
+            --border: {{ custom_theme.border }};
+            --border-color: {{ custom_theme.border }};
+            --success: {{ custom_theme.success }};
+            --error: {{ custom_theme.error }};
+            --card-bg: {{ custom_theme.card_bg }};
+            --card-bg-secondary: {{ custom_theme.card_bg_secondary or custom_theme.card_bg }};
+            --shadow: {{ custom_theme.shadow or 'rgba(0, 0, 0, 0.1)' }};
+        }
+        {% if custom_theme.nav_home_color %}
+        .nav-item[href*="main"] { color: {{ custom_theme.nav_home_color }}; }
+        {% endif %}
+        {% if custom_theme.nav_achievements_color %}
+        .nav-item[href*="achievements"] { color: {{ custom_theme.nav_achievements_color }}; }
+        {% endif %}
+        {% if custom_theme.nav_leaderboard_color %}
+        .nav-item[href*="leaderboard"] { color: {{ custom_theme.nav_leaderboard_color }}; }
+        {% endif %}
+        {% if custom_theme.nav_profile_color %}
+        .nav-item[href*="profile"] { color: {{ custom_theme.nav_profile_color }}; }
+        {% endif %}
+        {% if custom_theme.nav_settings_color %}
+        .nav-item[href*="settings"] { color: {{ custom_theme.nav_settings_color }}; }
+        {% endif %}
+    </style>
+    {% endif %}
+    {% endif %}
+</head>
+<body>
+    {% block content %}{% endblock %}
+    
+    {% if current_user.is_authenticated and (show_nav is not defined or show_nav) %}
+    <nav class="bottom-nav">
+        <a href="{{ url_for('main') }}" class="nav-item {% if request.endpoint == 'main' %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+            </svg>
+            <span>Главная</span>
+        </a>
+        <a href="{{ url_for('leaderboard') }}" class="nav-item {% if request.endpoint == 'leaderboard' %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path>
+            </svg>
+            <span>Рейтинг</span>
+        </a>
+        <a href="{{ url_for('achievements') }}" class="nav-item {% if request.endpoint == 'achievements' %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="8" r="7"></circle>
+                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline>
+            </svg>
+            <span>Достижения</span>
+        </a>
+        <a href="{{ url_for('profile') }}" class="nav-item {% if request.endpoint == 'profile' %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>Профиль</span>
+        </a>
+        <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span>Настройки</span>
+        </a>
+    </nav>
+    {% endif %}
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% if current_user.is_authenticated %}
+    <script>
+        // Инициализация темы пользователя
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if current_user.theme == 'custom' and current_user.custom_theme_id %}
+            setTheme('custom', {{ current_user.custom_theme_id }});
+            {% else %}
+            setTheme('{{ current_user.theme }}');
+            {% endif %}
+        });
+    </script>
+    {% endif %}
+    {% block extra_js %}{% endblock %}
+</body>
+</html>
+
