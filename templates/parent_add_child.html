@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить ребенка - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Добавить ребенка</h2>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h3 class="card-title">Регистрация ребенка</h3>
+        <form id="add-child-form">
+            <div class="form-group">
+                <label for="email">Email ребенка</label>
+                <input type="email" id="email" name="email" required placeholder="email@пример.ru">
+            </div>
+            <div class="form-group">
+                <label for="first_name">Имя</label>
+                <input type="text" id="first_name" name="first_name" required placeholder="Имя">
+            </div>
+            <div class="form-group">
+                <label for="last_name">Фамилия</label>
+                <input type="text" id="last_name" name="last_name" required placeholder="Фамилия">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block" id="submit-btn" style="
+                background: linear-gradient(135deg, var(--accent) 0%, #667eea 100%);
+                border: none;
+                padding: 14px 24px;
+                border-radius: 12px;
+                font-size: 16px;
+                font-weight: 600;
+                color: white;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+            ">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="8.5" cy="7" r="4"></circle>
+                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                </svg>
+                Добавить ребенка
+            </button>
+        </form>
+        <div id="message" class="message" style="display: none;"></div>
+    </div>
+</div>
+
+<script>
+document.getElementById('add-child-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const submitBtn = document.getElementById('submit-btn');
+    const message = document.getElementById('message');
+    const originalText = submitBtn.textContent;
+
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Добавление...';
+    message.style.display = 'none';
+
+    const formData = {
+        email: document.getElementById('email').value.trim(),
+        first_name: document.getElementById('first_name').value.trim(),
+        last_name: document.getElementById('last_name').value.trim()
+    };
+
+    try {
+        const response = await fetch('/parent/add_child', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            message.className = 'message success';
+            message.textContent = data.message;
+            message.style.display = 'block';
+
+            // Clear form
+            document.getElementById('add-child-form').reset();
+
+            // Redirect after 2 seconds
+            setTimeout(() => {
+                window.location.href = '{{ url_for("parent_dashboard") }}';
+            }, 2000);
+        } else {
+            message.className = 'message error';
+            message.textContent = data.message;
+            message.style.display = 'block';
+        }
+    } catch (error) {
+        message.className = 'message error';
+        message.textContent = 'Ошибка сети. Попробуйте позже.';
+        message.style.display = 'block';
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+    }
+});
+</script>
+
+<style>
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text);
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg-secondary);
+    color: var(--text);
+    font-size: 16px;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+    padding: 12px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.btn-block:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.btn-block:active {
+    transform: translateY(0);
+}
+
+.btn-block:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+.message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.message.success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+</style>
+
+{% endblock %}

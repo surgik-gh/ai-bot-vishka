@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Мои ученики - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="{{ url_for('main') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Назад
+    </a>
+    <h2>Мои ученики</h2>
+    <div></div>
+</div>
+
+<div class="container">
+    <div class="card mb-20">
+        <h3 class="card-title">Прикрепить ученика</h3>
+        <form id="attachStudentForm">
+            <div class="form-group">
+                <label class="form-label">Email ученика</label>
+                <input type="email" class="form-input" name="student_email" required placeholder="student@example.com">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Прикрепить</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Список учеников</h3>
+        <div class="students-list">
+            {% for student in students %}
+            <div class="student-item">
+                <div class="student-info">
+                    <h4>{{ student.first_name }} {{ student.last_name }}</h4>
+                    <p style="color: var(--text-secondary);">{{ student.email }}</p>
+                    <div class="student-stats">
+                        <span>Токены: {{ student.tokens }}</span>
+                        <span>Рейтинг: {{ student.rating }}</span>
+                        <span>Викторин: {{ student.total_quizzes }}</span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <p style="text-align: center; color: var(--text-secondary); padding: 20px;">
+                У вас пока нет прикрепленных учеников
+            </p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('attachStudentForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData);
+        
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("attach_student_to_teacher") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Ученик прикреплен', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(result.message || 'Ошибка', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+</script>
+{% endblock %}
+

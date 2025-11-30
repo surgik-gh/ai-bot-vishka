@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Панель родителя - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Панель родителя</h2>
+</div>
+
+<div class="container">
+    <div class="card mb-20">
+        <h3 class="card-title">Добавить ребенка</h3>
+        <a href="{{ url_for('parent_add_child') }}" class="btn btn-primary btn-block">Добавить нового ребенка</a>
+    </div>
+
+    {% if children %}
+    <div class="card">
+        <h3 class="card-title">Ваши дети</h3>
+        <div class="children-list">
+            {% for child in children %}
+            <div class="child-item">
+                <div class="child-info">
+                    <div class="child-name">{{ child.first_name }} {{ child.last_name }}</div>
+                    <div class="child-stats">
+                        <div class="stat">
+                            <span class="stat-label">Рейтинг:</span>
+                            <span class="stat-value">{{ child.rating }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Викторин:</span>
+                            <span class="stat-value">{{ child.total_quizzes }}</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Точность:</span>
+                            <span class="stat-value">{{ child.accuracy }}%</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Токены:</span>
+                            <span class="stat-value">{{ child.tokens }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="child-actions">
+                    <a href="{{ url_for('parent_child_progress', child_id=child.id) }}" class="btn btn-secondary btn-small">Подробности</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="card">
+        <h3 class="card-title">У вас пока нет детей в системе</h3>
+        <p>Добавьте ребенка, чтобы начать отслеживать его прогресс в обучении.</p>
+        <a href="{{ url_for('parent_add_child') }}" class="btn btn-primary">Добавить первого ребенка</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.children-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.child-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+}
+
+.child-info {
+    flex: 1;
+}
+
+.child-name {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color: var(--text);
+}
+
+.child-stats {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 80px;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.child-actions {
+    margin-left: 20px;
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+.btn-block {
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+</style>
+
+{% endblock %}

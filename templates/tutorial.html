@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Обучение - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Добро пожаловать!</h2>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h3 class="card-title">Обязательное обучение</h3>
+        <div style="padding: 20px;">
+            <h4 style="margin-bottom: 15px;">Добро пожаловать в AI Бот!</h4>
+            <p style="margin-bottom: 15px; line-height: 1.6;">
+                Это образовательная платформа, которая поможет вам изучать различные предметы с помощью искусственного интеллекта.
+            </p>
+            
+            <div style="margin: 20px 0;">
+                <h5 style="margin-bottom: 10px;">Основные возможности:</h5>
+                <ul style="margin-left: 20px; line-height: 1.8;">
+                    <li>Изучение материалов по различным предметам</li>
+                    <li>Прохождение автоматически сгенерированных викторин</li>
+                    <li>Система токенов и достижений</li>
+                    <li>Рейтинговая система</li>
+                    <li>Выбор AI-эксперта для помощи в обучении</li>
+                </ul>
+            </div>
+            
+            <div style="margin: 20px 0;">
+                <h5 style="margin-bottom: 10px;">Как начать:</h5>
+                <ol style="margin-left: 20px; line-height: 1.8;">
+                    <li>Выберите предмет для изучения</li>
+                    <li>Изучите материал урока</li>
+                    <li>Пройдите викторину для закрепления знаний</li>
+                    <li>Получайте токены и достижения за правильные ответы</li>
+                </ol>
+            </div>
+            
+            <button id="completeTutorialBtn" class="btn btn-primary btn-block" style="margin-top: 30px;">
+                Понятно, начать обучение!
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('completeTutorialBtn').addEventListener('click', async function() {
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("complete_tutorial") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include'
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                window.location.href = result.redirect;
+            } else {
+                showNotification('Ошибка', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+</script>
+{% endblock %}
+

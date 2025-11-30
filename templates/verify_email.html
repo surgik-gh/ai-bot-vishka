@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Подтверждение email - AI Бот</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 400px; margin: 50px auto;">
+        <div class="card">
+            <h1 class="text-center" style="margin-bottom: 30px;">Подтверждение email</h1>
+            <p class="text-center" style="color: var(--text-secondary); margin-bottom: 20px;">
+                Мы отправили код подтверждения на <strong>{{ email }}</strong>
+            </p>
+            <form id="verifyForm">
+                <input type="hidden" name="email" value="{{ email }}">
+                <div class="form-group">
+                    <label class="form-label">Введите код подтверждения</label>
+                    <input type="text" class="form-input" name="code" maxlength="6" required 
+                           placeholder="000000" style="text-align: center; font-size: 24px; letter-spacing: 8px;">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Подтвердить</button>
+            </form>
+            <div class="text-center mt-20">
+                <button id="resendBtn" class="btn btn-secondary" style="padding: 8px 16px;">Отправить код повторно</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            showLoading();
+            try {
+                const response = await fetch('{{ url_for("verify_email") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({message: 'Ошибка сервера'}));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+                
+                const result = await response.json();
+                hideLoading();
+                
+                if (result.success) {
+                    showNotification('Email успешно подтвержден!', 'success');
+                    setTimeout(() => {
+                        window.location.href = result.redirect;
+                    }, 1000);
+                } else {
+                    showNotification(result.message || 'Неверный код', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showNotification(error.message || 'Ошибка соединения', 'error');
+            }
+        });
+        
+        document.getElementById('resendBtn').addEventListener('click', async function() {
+            const email = document.querySelector('input[name="email"]').value;
+            showLoading();
+            try {
+                const response = await fetch('{{ url_for("send_verification_code") }}', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email: email})
+                });
+                const result = await response.json();
+                hideLoading();
+                
+                if (result.success) {
+                    showNotification('Код отправлен повторно', 'success');
+                } else {
+                    showNotification(result.message || 'Ошибка отправки кода', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showNotification('Ошибка соединения', 'error');
+            }
+        });
+        
+        // Set theme
+        const theme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+    </script>
+</body>
+</html>
+

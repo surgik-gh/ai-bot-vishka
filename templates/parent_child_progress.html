@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Прогресс {{ child.first_name }} {{ child.last_name }} - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Прогресс {{ child.first_name }} {{ child.last_name }}</h2>
+    <a href="{{ url_for('parent_dashboard') }}" class="btn btn-secondary" style="position: absolute; right: 20px; top: 20px;">← Назад к детям</a>
+</div>
+
+<div class="container">
+    <div class="card mb-20">
+        <h3 class="card-title">Статистика</h3>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.rating }}</div>
+                <div class="stat-label">Рейтинг</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.total_quizzes }}</div>
+                <div class="stat-label">Викторин пройдено</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.total_correct_answers }}/{{ stats.total_answers }}</div>
+                <div class="stat-label">Правильные ответы</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.accuracy }}%</div>
+                <div class="stat-label">Точность</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.tokens }}</div>
+                <div class="stat-label">Токены</div>
+            </div>
+        </div>
+    </div>
+
+    {% if lessons %}
+    <div class="card mb-20">
+        <h3 class="card-title">Созданные уроки</h3>
+        <div class="lessons-list">
+            {% for lesson in lessons %}
+            <div class="lesson-item">
+                <div class="lesson-info">
+                    <div class="lesson-title">{{ lesson.title }}</div>
+                    <div class="lesson-date">{{ lesson.created_at.strftime('%d.%m.%Y %H:%M') }}</div>
+                    <div class="lesson-subject">{{ lesson.subject.name }}</div>
+                </div>
+                {% if lesson.quiz %}
+                <div class="lesson-quiz-status">
+                    Викторина: {{ lesson.quiz.questions|length }} вопросов
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if quiz_attempts %}
+    <div class="card">
+        <h3 class="card-title">Попытки викторин</h3>
+        <div class="quiz-attempts-list">
+            {% for attempt, question, quiz, lesson in quiz_attempts %}
+            <div class="quiz-attempt-item {{ 'correct' if attempt.is_correct else 'incorrect' }}">
+                <div class="attempt-info">
+                    <div class="attempt-question">{{ question.question_text[:100] }}{% if question.question_text|length > 100 %}...{% endif %}</div>
+                    <div class="attempt-details">
+                        Урок: {{ lesson.title }} •
+                        Дата: {{ attempt.answered_at.strftime('%d.%m.%Y %H:%M') }}
+                    </div>
+                </div>
+                <div class="attempt-result">
+                    {% if attempt.is_correct %}
+                    <span class="correct-badge">✓ Правильно</span>
+                    {% else %}
+                    <span class="incorrect-badge">✗ Неправильно</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not lessons and not quiz_attempts %}
+    <div class="card">
+        <h3 class="card-title">Нет активности</h3>
+        <p>Ребенок еще не создавал уроки и не проходил викторины.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.lessons-list, .quiz-attempts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.lesson-item, .quiz-attempt-item {
+    padding: 15px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.lesson-info {
+    flex: 1;
+}
+
+.lesson-title {
+    font-weight: bold;
+    color: var(--text);
+    margin-bottom: 5px;
+}
+
+.lesson-date, .lesson-subject {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.attempt-question {
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 5px;
+}
+
+.attempt-details {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.correct-badge {
+    background: #d4edda;
+    color: #155724;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.incorrect-badge {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.mb-20 {
+    margin-bottom: 20px;
+}
+
+.attempt-result {
+    margin-left: 15px;
+}
+</style>
+
+{% endblock %}

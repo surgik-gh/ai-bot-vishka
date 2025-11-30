@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Управление предметами - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="{{ url_for('main') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Назад
+    </a>
+    <h2>Управление предметами</h2>
+    <div></div>
+</div>
+
+<div class="container">
+    <div class="card mb-20">
+        <h3 class="card-title">Добавить предмет</h3>
+        <form id="addSubjectForm">
+            <div class="form-group">
+                <label class="form-label">Название</label>
+                <input type="text" class="form-input" name="name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Описание</label>
+                <textarea class="form-textarea" name="description"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Добавить</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Список предметов</h3>
+        <div class="subjects-grid">
+            {% for subject in subjects %}
+            <div class="subject-card" data-subject-id="{{ subject.id }}">
+                <div class="subject-card-header">
+                    <h4>{{ subject.name }}</h4>
+                    <div class="subject-actions">
+                        <button class="btn-icon edit-subject" data-id="{{ subject.id }}" title="Редактировать">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button class="btn-icon delete-subject" data-id="{{ subject.id }}" title="Удалить">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                {% if subject.description %}
+                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 10px;">{{ subject.description }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования -->
+<div id="editSubjectModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Редактировать предмет</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="editSubjectForm">
+            <input type="hidden" id="editSubjectId" name="id">
+            <div class="form-group">
+                <label class="form-label">Название</label>
+                <input type="text" class="form-input" id="editSubjectName" name="name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Описание</label>
+                <textarea class="form-textarea" id="editSubjectDescription" name="description"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.subject-card {
+    position: relative;
+    padding: 15px;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.subject-card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.subject-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.subject-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+}
+
+.btn-icon:hover {
+    color: var(--accent);
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+</style>
+
+<script>
+    // Добавление предмета
+    document.getElementById('addSubjectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData);
+        
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("admin_subjects") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Предмет добавлен', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Ошибка добавления предмета', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+
+    // Редактирование предмета
+    document.querySelectorAll('.edit-subject').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const subjectId = this.dataset.id;
+            const card = document.querySelector(`[data-subject-id="${subjectId}"]`);
+            const name = card.querySelector('h4').textContent;
+            const description = card.querySelector('p') ? card.querySelector('p').textContent.trim() : '';
+            
+            document.getElementById('editSubjectId').value = subjectId;
+            document.getElementById('editSubjectName').value = name;
+            document.getElementById('editSubjectDescription').value = description;
+            document.getElementById('editSubjectModal').style.display = 'flex';
+        });
+    });
+
+    // Сохранение изменений
+    document.getElementById('editSubjectForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = {
+            name: formData.get('name'),
+            description: formData.get('description')
+        };
+        const subjectId = formData.get('id');
+        
+        showLoading();
+        try {
+            const response = await fetch(`/api/admin/subject/${subjectId}`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Предмет обновлен', 'success');
+                closeEditModal();
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(result.message || 'Ошибка обновления предмета', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+
+    // Удаление предмета
+    document.querySelectorAll('.delete-subject').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const subjectId = this.dataset.id;
+            const card = document.querySelector(`[data-subject-id="${subjectId}"]`);
+            const name = card.querySelector('h4').textContent;
+            
+            if (!confirm(`Вы уверены, что хотите удалить предмет "${name}"?`)) {
+                return;
+            }
+            
+            showLoading();
+            try {
+                const response = await fetch(`/api/admin/subject/${subjectId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const result = await response.json();
+                hideLoading();
+                
+                if (result.success) {
+                    showNotification('Предмет удален', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(result.message || 'Ошибка удаления предмета', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showNotification('Ошибка соединения', 'error');
+            }
+        });
+    });
+
+    function closeEditModal() {
+        document.getElementById('editSubjectModal').style.display = 'none';
+    }
+
+    document.querySelector('.modal-close').addEventListener('click', closeEditModal);
+    document.getElementById('editSubjectModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeEditModal();
+        }
+    });
+</script>
+{% endblock %}

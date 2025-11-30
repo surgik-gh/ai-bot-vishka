@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+
+{% block title %}Викторина - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Викторина</h2>
+    <div class="tokens-display">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        <span id="tokens-count">{{ current_user.tokens }}</span>
+    </div>
+</div>
+
+<div class="container quiz-container">
+    <div id="explanation-section" class="card mb-20">
+        <h3 class="card-title">Объяснение материала</h3>
+        <div id="explanation-text" style="line-height: 1.6;">
+            <div class="loading">
+                <div class="spinner"></div>
+                <p>Генерация объяснения...</p>
+            </div>
+        </div>
+        <button id="start-quiz-btn" class="btn btn-primary btn-block mt-20" style="display: none;">Начать викторину</button>
+    </div>
+    
+    <div id="quiz-section" style="display: none;">
+        <div id="questions-container"></div>
+        <button id="submit-quiz-btn" class="btn btn-primary btn-block mt-20">Завершить викторину</button>
+    </div>
+    
+    <div id="results-section" style="display: none;" class="card mt-20">
+        <h3 class="card-title">Результаты</h3>
+        <div id="results-content"></div>
+    </div>
+</div>
+
+<script>
+    const questions = {{ questions|tojson }};
+    const quizId = {{ quiz.id }};
+    const isRetry = {{ 'true' if is_retry else 'false' }};
+    const previousAttempt = {{ previous_attempt|tojson if previous_attempt else 'null' }};
+    let userAnswers = {};
+    let explanation = sessionStorage.getItem('explanation') || 'Объяснение материала готово. Приступаем к викторине!';
+    
+    // Показываем предупреждение о повторном прохождении
+    {% if is_retry and previous_attempt %}
+    if (isRetry) {
+        showNotification('Повторное прохождение: награды не начисляются', 'info');
+    }
+    {% endif %}
+    
+    // Show explanation (поддерживаем markdown через DOMPurify или просто HTML)
+    // Если explanation содержит HTML из markdown, используем его напрямую
+    const explanationHtml = explanation || 'Объяснение материала готово. Приступаем к викторине!';
+    document.getElementById('explanation-text').innerHTML = explanationHtml;
+    document.getElementById('start-quiz-btn').style.display = 'block';
+    
+    document.getElementById('start-quiz-btn').addEventListener('click', function() {
+        document.getElementById('explanation-section').style.display = 'none';
+        document.getElementById('quiz-section').style.display = 'block';
+        renderQuestions();
+    });
+    
+    function renderQuestions() {
+        const container = document.getElementById('questions-container');
+        container.innerHTML = '';
+        
+        questions.forEach((question, index) => {
+            const questionCard = document.createElement('div');
+            questionCard.className = 'question-card';
+            questionCard.innerHTML = `
+                <div class="question-text">${index + 1}. ${question.question_text}</div>
+                <div class="question-options" data-question-id="${question.id}" data-question-type="${question.question_type}">
+                    ${renderQuestionOptions(question)}
+                </div>
+            `;
+            container.appendChild(questionCard);
+        });
+    }
+    
+    function renderQuestionOptions(question) {
+        if (question.question_type === 'text') {
+            return `<input type="text" class="form-input answer-input" data-question-id="${question.id}" placeholder="Введите ответ" required>`;
+        } else if (question.question_type === 'single') {
+            if (!question.options || question.options.length === 0) {
+                return '<p style="color: var(--text-secondary);">Нет вариантов ответа</p>';
+            }
+            return question.options.map((option, idx) => `
+                <div class="option-item" style="padding: 10px; margin: 5px 0; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: background 0.2s;" 
+                     onclick="document.getElementById('q${question.id}_${idx}').checked = true; document.getElementById('q${question.id}_${idx}').dispatchEvent(new Event('change'));">
+                    <input type="radio" name="question_${question.id}" value="${option}" id="q${question.id}_${idx}" required>
+                    <label for="q${question.id}_${idx}" style="margin-left: 10px; cursor: pointer; width: 100%; display: inline-block;">${option}</label>
+                </div>
+            `).join('');
+        } else if (question.question_type === 'multiple') {
+            if (!question.options || question.options.length === 0) {
+                return '<p style="color: var(--text-secondary);">Нет вариантов ответа</p>';
+            }
+            return question.options.map((option, idx) => `
+                <div class="option-item" style="padding: 10px; margin: 5px 0; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: background 0.2s;"
+                     onclick="const cb = document.getElementById('q${question.id}_${idx}'); cb.checked = !cb.checked; cb.dispatchEvent(new Event('change'));">
+                    <input type="checkbox" name="question_${question.id}" value="${option}" id="q${question.id}_${idx}">
+                    <label for="q${question.id}_${idx}" style="margin-left: 10px; cursor: pointer; width: 100%; display: inline-block;">${option}</label>
+                </div>
+            `).join('');
+        }
+        return '';
+    }
+    
+    // Handle option clicks - используем делегирование событий
+    document.addEventListener('change', function(e) {
+        if (e.target.type === 'radio' || e.target.type === 'checkbox') {
+            const questionId = e.target.name.replace('question_', '');
+            const questionContainer = document.querySelector(`[data-question-id="${questionId}"]`);
+            if (questionContainer) {
+                const questionType = questionContainer.dataset.questionType;
+                
+                if (questionType === 'single') {
+                    userAnswers[questionId] = e.target.value;
+                } else if (questionType === 'multiple') {
+                    const checkboxes = document.querySelectorAll(`input[name="question_${questionId}"]:checked`);
+                    userAnswers[questionId] = Array.from(checkboxes).map(cb => cb.value);
+                }
+                console.log('Answer updated:', questionId, userAnswers[questionId]);
+            }
+        }
+    });
+    
+    // Handle text input
+    document.addEventListener('input', function(e) {
+        if (e.target.classList.contains('answer-input')) {
+            const questionId = e.target.dataset.questionId;
+            userAnswers[questionId] = e.target.value;
+            console.log('Text answer updated:', questionId, userAnswers[questionId]);
+        }
+    });
+    
+    document.getElementById('submit-quiz-btn').addEventListener('click', async function() {
+        // Не требуем ответы на все вопросы - пустые ответы будут считаться неправильными
+        showLoading();
+        try {
+            console.log('Submitting quiz:', { quiz_id: quizId, answers: userAnswers, is_retry: isRetry });
+            const response = await fetch('{{ url_for("submit_quiz") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({
+                    quiz_id: quizId,
+                    answers: userAnswers,
+                    is_retry: isRetry
+                })
+            });
+            
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                document.getElementById('quiz-section').style.display = 'none';
+                document.getElementById('results-section').style.display = 'block';
+                
+                const tokensInfo = result.tokens_earned > 0 
+                    ? `<p style="color: var(--accent); font-size: 18px; margin-top: 10px;">Получено токенов: +${result.tokens_earned}</p>`
+                    : `<p style="color: var(--text-secondary); font-size: 14px; margin-top: 10px;">Повторное прохождение: награды не начисляются</p>`;
+                
+                document.getElementById('results-content').innerHTML = `
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <h2>${result.score} из ${result.total} правильных ответов</h2>
+                        <p style="font-size: 16px; margin-top: 10px;">Процент правильности: ${result.percentage}%</p>
+                        ${tokensInfo}
+                    </div>
+                    <a href="{{ url_for('main') }}" class="btn btn-primary btn-block mt-20">Вернуться на главную</a>
+                `;
+                
+                // Update tokens display только если начислены токены
+                if (result.tokens_earned > 0) {
+                    document.getElementById('tokens-count').textContent = parseInt(document.getElementById('tokens-count').textContent) + result.tokens_earned;
+                }
+            } else {
+                showNotification('Ошибка отправки ответов', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+</script>
+{% endblock %}
+

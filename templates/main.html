@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Главная - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Главная</h2>
+    <div class="tokens-display">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+        </svg>
+        <span id="tokens-count">{{ current_user.tokens }}</span>
+    </div>
+</div>
+
+<div class="container">
+    {% if current_user.role == 'administrator' %}
+    <div class="card mb-20">
+        <h3 class="card-title">Администратор</h3>
+        <a href="{{ url_for('admin_subjects') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Управление предметами</a>
+        <a href="{{ url_for('admin_experts') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Управление экспертами</a>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Управление пользователями</a>
+        <a href="{{ url_for('admin_achievements') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Управление достижениями</a>
+    </div>
+    {% endif %}
+
+    {% if current_user.role == 'teacher' %}
+    <div class="card mb-20">
+        <h3 class="card-title">Учитель</h3>
+        <a href="{{ url_for('teacher_create_lesson') }}" class="btn btn-primary btn-block" style="margin-bottom: 10px;">Создать урок</a>
+        <a href="{{ url_for('teacher_students') }}" class="btn btn-primary btn-block">Мои ученики</a>
+    </div>
+    {% endif %}
+
+    {% if current_user.role == 'parent' %}
+    <div class="card mb-20">
+        <h3 class="card-title">Родитель</h3>
+        <a href="{{ url_for('parent_dashboard') }}" class="btn btn-primary btn-block">Панель родителя</a>
+    </div>
+    {% endif %}
+
+    <div class="card mb-20">
+        <h3 class="card-title">История уроков</h3>
+        {% if lessons_history and lessons_history|length > 0 %}
+        <div class="lessons-history-list">
+            {% for item in lessons_history %}
+            <div class="lesson-history-item" style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="flex: 1;">
+                    <h4 style="margin: 0 0 5px 0; color: var(--text-primary);">{{ item.lesson.title }}</h4>
+                    <p style="margin: 0; font-size: 12px; color: var(--text-secondary);">
+                        Предмет: {{ item.lesson.subject.name }} | 
+                        {% if item.is_created %}
+                        Создан: {{ item.lesson.created_at.strftime('%d.%m.%Y %H:%M') }} | 
+                        {% endif %}
+                        {% if item.last_attempt %}
+                        Последний раз: {{ item.last_attempt.completed_at.strftime('%d.%m.%Y %H:%M') }} | 
+                        Попыток: {{ item.attempts_count }} | 
+                        Результат: {{ item.last_attempt.score }}/{{ item.last_attempt.total_questions }}
+                        {% else %}
+                        <span style="color: var(--text-secondary);">Еще не пройден</span>
+                        {% endif %}
+                    </p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    {% if item.lesson.quiz %}
+                    <a href="{{ url_for('quiz_page', quiz_id=item.lesson.quiz.id) }}{% if item.last_attempt %}?retry=true{% endif %}" 
+                       class="btn btn-secondary" 
+                       style="padding: 8px 16px; font-size: 14px;">
+                        {% if item.last_attempt %}Повторить квест{% else %}Пройти квест{% endif %}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="padding: 40px; text-align: center; color: var(--text-secondary);">
+            <p style="font-size: 16px; margin: 0;">Вы еще не создали урок</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h3 class="card-title">Выберите предмет</h3>
+        <div class="subjects-grid">
+            {% for subject in subjects %}
+            <div class="subject-card" onclick="window.location.href='{{ url_for('lesson_page', subject_id=subject.id) }}'">
+                <h4>{{ subject.name }}</h4>
+                {% if subject.description %}
+                <p style="font-size: 12px; color: var(--text-secondary);">{{ subject.description[:50] }}...</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

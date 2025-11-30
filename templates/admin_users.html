@@ -1,0 +1,397 @@
+{% extends "base.html" %}
+
+{% block title %}Управление пользователями - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="{{ url_for('main') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Назад
+    </a>
+    <h2>Управление пользователями</h2>
+    <div></div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h3 class="card-title">Список пользователей</h3>
+        <div class="users-list">
+            {% for user in users %}
+            <div class="user-item" data-user-id="{{ user.id }}">
+                <div class="user-info">
+                    <div class="user-name">
+                        <strong>{{ user.first_name }} {{ user.last_name }}</strong>
+                        <span class="user-role user-role-{{ user.role }}">{{ user.role }}</span>
+                    </div>
+                    <div class="user-details">
+                        <span class="detail-item">
+                            <img src="{{ url_for('static', filename='icons/mail.svg') }}" alt="Email" class="detail-icon">
+                            {{ user.email }}
+                        </span>
+                        <span class="detail-item">
+                            <img src="{{ url_for('static', filename='icons/token.svg') }}" alt="Токены" class="detail-icon">
+                            <span class="user-tokens" data-user-id="{{ user.id }}">{{ user.tokens }}</span> токенов
+                        </span>
+                        <span class="detail-item">
+                            <img src="{{ url_for('static', filename='icons/chart.svg') }}" alt="Рейтинг" class="detail-icon">
+                            Рейтинг: {{ user.rating }}
+                        </span>
+                    </div>
+                    <div class="user-stats">
+                        <span>Викторин: {{ user.total_quizzes }}</span>
+                        <span>Правильных ответов: {{ user.total_correct_answers }}/{{ user.total_answers }}</span>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    {% if user.id != current_user.id %}
+                    <button class="btn btn-primary change-balance" data-id="{{ user.id }}" data-name="{{ user.first_name }} {{ user.last_name }}" data-current-balance="{{ user.tokens }}">
+                        Изменить баланс
+                    </button>
+                    <button class="btn btn-secondary change-role" data-id="{{ user.id }}" data-name="{{ user.first_name }} {{ user.last_name }}" data-current-role="{{ user.role }}">
+                        Изменить роль
+                    </button>
+                    <button class="btn btn-danger delete-user" data-id="{{ user.id }}" data-name="{{ user.first_name }} {{ user.last_name }}">
+                        Удалить
+                    </button>
+                    {% else %}
+                    <span style="color: var(--text-secondary); font-size: 12px;">Вы</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.users-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.user-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    transition: all 0.3s ease;
+}
+
+.user-item:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.user-info {
+    flex: 1;
+}
+
+.user-name {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.user-role {
+    background: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.user-role-student {
+    background: #007bff;
+}
+
+.user-role-teacher {
+    background: #28a745;
+}
+
+.user-role-expert {
+    background: #ffc107;
+    color: #212529;
+}
+
+.user-role-parent {
+    background: #17a2b8;
+}
+
+.user-role-administrator {
+    background: #dc3545;
+}
+
+.user-details {
+    display: flex;
+    gap: 15px;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    flex-wrap: wrap;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.detail-icon {
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
+}
+
+.user-stats {
+    display: flex;
+    gap: 15px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+}
+
+.user-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+}
+</style>
+
+<script>
+    // Обработчик для изменения баланса
+    document.querySelectorAll('.change-balance').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.dataset.id;
+            const userName = this.dataset.name;
+            const currentBalance = parseInt(this.dataset.currentBalance);
+            
+            const newBalance = prompt(`Введите новый баланс для пользователя "${userName}":\n\nТекущий баланс: ${currentBalance}`, currentBalance);
+            
+            if (newBalance === null) {
+                // Пользователь отменил операцию
+                return;
+            }
+            
+            // Проверяем, что введено число
+            const balanceValue = parseInt(newBalance);
+            if (isNaN(balanceValue) || balanceValue < 0) {
+                alert('Баланс должен быть неотрицательным числом');
+                return;
+            }
+            
+            if (balanceValue === currentBalance) {
+                alert('Баланс не изменился');
+                return;
+            }
+            
+            showLoading();
+            fetch(`/api/admin/user/${userId}/balance`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ balance: balanceValue }),
+                credentials: 'include'
+            })
+            .then(response => response.json())
+            .then(result => {
+                hideLoading();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    
+                    // Обновляем отображение баланса на странице
+                    const tokenSpan = document.querySelector(`.user-tokens[data-user-id="${userId}"]`);
+                    if (tokenSpan) {
+                        tokenSpan.textContent = balanceValue;
+                    }
+                    
+                    // Обновляем data-атрибут кнопки
+                    this.dataset.currentBalance = balanceValue;
+                } else {
+                    showNotification(result.message || 'Ошибка изменения баланса', 'error');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showNotification('Ошибка соединения', 'error');
+                console.error('Error:', error);
+            });
+        });
+    });
+
+    // Обработчик для изменения роли
+    document.querySelectorAll('.change-role').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const userId = this.dataset.id;
+            const userName = this.dataset.name;
+            const currentRole = this.dataset.currentRole;
+            
+            // Опции ролей
+            const roles = [
+                { value: 'student', label: 'Ученик' },
+                { value: 'teacher', label: 'Учитель' },
+                { value: 'expert', label: 'Эксперт' },
+                { value: 'parent', label: 'Родитель' },
+                { value: 'administrator', label: 'Администратор' }
+            ];
+            
+            // Создаем HTML для выбора роли
+            let roleOptions = '';
+            roles.forEach(role => {
+                const selected = role.value === currentRole ? 'selected' : '';
+                roleOptions += `<option value="${role.value}" ${selected}>${role.label}</option>`;
+            });
+            
+            // Создаем модальное окно для выбора роли
+            const modal = document.createElement('div');
+            modal.innerHTML = `
+                <div class="role-modal-overlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;">
+                    <div class="role-modal" style="background: var(--card-bg); padding: 20px; border-radius: 8px; width: 400px; max-width: 90vw;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px;">Изменить роль пользователя</h3>
+                        <p style="margin: 10px 0;"><strong>Пользователь:</strong> ${userName}</p>
+                        <p style="margin: 10px 0;"><strong>Текущая роль:</strong> ${currentRole}</p>
+                        <div style="margin: 15px 0;">
+                            <label for="role-select" style="display: block; margin-bottom: 5px;">Выберите новую роль:</label>
+                            <select id="role-select" style="width: 10%; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg); color: var(--text-primary);">
+                                ${roleOptions}
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                            <button id="cancel-role-change" class="btn btn-secondary" style="background: #6c757d;">Отмена</button>
+                            <button id="confirm-role-change" class="btn btn-primary">Сохранить</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            const confirmBtn = document.getElementById('confirm-role-change');
+            const cancelBtn = document.getElementById('cancel-role-change');
+            const roleSelect = document.getElementById('role-select');
+            
+            confirmBtn.addEventListener('click', function() {
+                const newRole = roleSelect.value;
+                
+                if (newRole === currentRole) {
+                    alert('Роль не изменилась');
+                    document.body.removeChild(modal);
+                    return;
+                }
+                
+                // Подтверждение изменения роли
+                if (!confirm(`Вы уверены, что хотите изменить роль пользователя "${userName}" с "${currentRole}" на "${newRole}"?`)) {
+                    document.body.removeChild(modal);
+                    return;
+                }
+                
+                showLoading();
+                fetch(`/api/admin/user/${userId}/role`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ role: newRole }),
+                    credentials: 'include'
+                })
+                .then(response => response.json())
+                .then(result => {
+                    hideLoading();
+                    
+                    if (result.success) {
+                        showNotification(result.message, 'success');
+                        
+                        // Обновляем отображение роли на странице
+                        const roleSpan = document.querySelector(`.user-item[data-user-id="${userId}"] .user-role`);
+                        if (roleSpan) {
+                            roleSpan.textContent = newRole;
+                            roleSpan.className = 'user-role'; // сбрасываем классы
+                            roleSpan.classList.add('user-role-' + newRole.toLowerCase());
+                        }
+                        
+                        // Обновляем data-атрибут кнопки
+                        const roleBtn = document.querySelector(`.change-role[data-id="${userId}"]`);
+                        if (roleBtn) {
+                            roleBtn.dataset.currentRole = newRole;
+                        }
+                    } else {
+                        showNotification(result.message || 'Ошибка изменения роли', 'error');
+                    }
+                    
+                    document.body.removeChild(modal);
+                })
+                .catch(error => {
+                    hideLoading();
+                    showNotification('Ошибка соединения', 'error');
+                    console.error('Error:', error);
+                    document.body.removeChild(modal);
+                });
+            });
+            
+            cancelBtn.addEventListener('click', function() {
+                document.body.removeChild(modal);
+            });
+        });
+    });
+
+    document.querySelectorAll('.delete-user').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const userId = this.dataset.id;
+            const userName = this.dataset.name;
+            
+            if (!confirm(`Вы уверены, что хотите удалить пользователя "${userName}"?\n\nЭто действие нельзя отменить!`)) {
+                return;
+            }
+            
+            if (!confirm(`ВНИМАНИЕ! Все данные пользователя будут удалены безвозвратно.\n\nПродолжить удаление "${userName}"?`)) {
+                return;
+            }
+            
+            showLoading();
+            try {
+                const response = await fetch(`/api/admin/user/${userId}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const result = await response.json();
+                hideLoading();
+                
+                if (result.success) {
+                    showNotification('Пользователь удален', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(result.message || 'Ошибка удаления пользователя', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showNotification('Ошибка соединения', 'error');
+            }
+        });
+    });
+</script>
+{% endblock %}
+

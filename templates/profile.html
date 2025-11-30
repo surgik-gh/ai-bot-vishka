@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Профиль - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <h2>Профиль</h2>
+</div>
+
+<div class="container">
+    <div class="profile-header">
+        {% if current_user.expert %}
+        <div class="profile-avatar">
+            {% if current_user.expert.avatar_url and current_user.expert.avatar_url.startswith('uploads/') %}
+            <img src="{{ url_for('uploaded_file', filename=current_user.expert.avatar_url.replace('uploads/', '')) }}" alt="{{ current_user.expert.name }}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+            {% else %}
+            {{ current_user.expert.name[0] }}
+            {% endif %}
+        </div>
+        <h3>{{ current_user.expert.name }}</h3>
+        {% else %}
+        <div class="profile-avatar">
+            {{ current_user.first_name[0] }}
+        </div>
+        {% endif %}
+    </div>
+    
+    <div class="card">
+        <div class="profile-info">
+            <div class="info-item">
+                <span>Имя:</span>
+                <span><strong>{{ current_user.first_name }} {{ current_user.last_name }}</strong></span>
+            </div>
+            <div class="info-item">
+                <span>Email:</span>
+                <span>{{ current_user.email }}</span>
+            </div>
+            <div class="info-item">
+                <span>Роль:</span>
+                <span>
+                    {% if current_user.role == 'student' %}Ученик
+                    {% elif current_user.role == 'teacher' %}Учитель
+                    {% elif current_user.role == 'administrator' %}Администратор
+                    {% endif %}
+                </span>
+            </div>
+            <div class="info-item">
+                <span>Токены:</span>
+                <span style="color: var(--accent); font-weight: 600;">{{ current_user.tokens }}</span>
+            </div>
+            <div class="info-item" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Email подтвержден:</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    {% if current_user.email_verified %}
+                    <span class="status-badge status-success">
+                        <img src="{{ url_for('static', filename='icons/check.svg') }}" alt="Да" class="status-icon">
+                        Да
+                    </span>
+                    {% else %}
+                    <span class="status-badge status-error">
+                        <img src="{{ url_for('static', filename='icons/x.svg') }}" alt="Нет" class="status-icon">
+                        Нет
+                    </span>
+                    <button id="verify-email-btn" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                        Подтвердить
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="info-item" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>GitHub привязан:</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    {% if current_user.github_id %}
+                    <span class="status-badge status-success">
+                        <img src="{{ url_for('static', filename='icons/check.svg') }}" alt="Да" class="status-icon">
+                        Да
+                    </span>
+                    {% else %}
+                    <span class="status-badge status-error">
+                        <img src="{{ url_for('static', filename='icons/x.svg') }}" alt="Нет" class="status-icon">
+                        Нет
+                    </span>
+                    <a href="{{ url_for('link_github') }}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                        Привязать
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if current_user.role in ['student', 'teacher'] %}
+    <div class="card mt-20">
+        <h3 class="card-title">Выбор аватара (эксперта)</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 15px;">
+            {% if current_user.role == 'student' %}
+            Выберите эксперта, который будет помогать вам в обучении
+            {% else %}
+            Выберите аватар для вашего профиля
+            {% endif %}
+        </p>
+        <div class="form-group">
+            <label class="form-label">Текущий аватар:</label>
+            <select class="form-input" id="expert-selector">
+                <option value="">Не выбран</option>
+                {% for expert in experts %}
+                <option value="{{ expert.id }}" {% if current_user.selected_expert_id == expert.id %}selected{% endif %}>
+                    {{ expert.name }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <button id="changeExpertBtn" class="btn btn-primary btn-block" style="margin-top: 10px;">
+            Изменить аватар
+        </button>
+    </div>
+    {% endif %}
+    
+    {% if current_user.role in ['student', 'teacher'] and current_user.selected_expert_id %}
+    <div class="card mt-20">
+        <h3 class="card-title">Чат с экспертом</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 15px;">
+            Задайте вопрос вашему эксперту. Стоимость: <strong style="color: var(--accent);">2 токена</strong> за сообщение
+        </p>
+        <div id="expert-chat-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 15px; padding: 15px; background: var(--bg-secondary); border-radius: 8px; min-height: 200px;">
+            <div id="chat-messages" style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="text-align: center; color: var(--text-secondary); font-size: 14px; padding: 20px;">
+                    Начните разговор с экспертом
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="chat-message-input" placeholder="Введите ваш вопрос..." 
+                   style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-secondary); color: var(--text-primary); font-size: 14px;"
+                   onkeypress="if(event.key === 'Enter') sendExpertMessage()">
+            <button id="send-chat-btn" class="btn btn-primary" onclick="sendExpertMessage()" style="padding: 12px 24px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle;">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </button>
+        </div>
+        <div id="chat-tokens-info" style="margin-top: 10px; font-size: 12px; color: var(--text-secondary);">
+            Ваши токены: <strong style="color: var(--accent);">{{ current_user.tokens }}</strong>
+        </div>
+    </div>
+    {% endif %}
+    
+    {% if current_user.email == 'admin@example.com' %}
+    <div class="card mt-20">
+        <h3 class="card-title">Переключение роли</h3>
+        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 15px;">
+            Вы можете переключиться между ролями для тестирования интерфейса
+        </p>
+        <div class="form-group">
+            <label class="form-label">Выберите роль:</label>
+            <select class="form-input" id="role-switcher">
+                <option value="student" {% if current_user.role == 'student' %}selected{% endif %}>Ученик</option>
+                <option value="teacher" {% if current_user.role == 'teacher' %}selected{% endif %}>Учитель</option>
+                <option value="administrator" {% if current_user.role == 'administrator' %}selected{% endif %}>Администратор</option>
+            </select>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    {% if current_user.email == 'admin@example.com' %}
+    document.getElementById('role-switcher').addEventListener('change', async function() {
+        const role = this.value;
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("switch_role") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({role: role})
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Роль успешно изменена', 'success');
+                setTimeout(() => {
+                    window.location.href = result.redirect;
+                }, 500);
+            } else {
+                showNotification(result.message || 'Ошибка переключения роли', 'error');
+                // Восстановить предыдущее значение
+                this.value = '{{ current_user.role }}';
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+            // Восстановить предыдущее значение
+            this.value = '{{ current_user.role }}';
+        }
+    });
+    {% endif %}
+    
+    {% if current_user.role in ['student', 'teacher'] %}
+    document.getElementById('changeExpertBtn').addEventListener('click', async function() {
+        const expertId = document.getElementById('expert-selector').value;
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("change_expert") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({expert_id: expertId ? parseInt(expertId) : null})
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification(result.message, 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showNotification(result.message || 'Ошибка изменения эксперта', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+    {% endif %}
+    
+    {% if current_user.role in ['student', 'teacher'] and current_user.selected_expert_id %}
+    function sendExpertMessage() {
+        const input = document.getElementById('chat-message-input');
+        const message = input.value.trim();
+        const sendBtn = document.getElementById('send-chat-btn');
+        const chatMessages = document.getElementById('chat-messages');
+        const tokensInfo = document.getElementById('chat-tokens-info');
+        
+        if (!message) {
+            showNotification('Введите сообщение', 'error');
+            return;
+        }
+        
+        // Проверка токенов
+        const currentTokens = parseInt(tokensInfo.textContent.match(/\d+/)[0]);
+        if (currentTokens < 2) {
+            showNotification('Недостаточно токенов. Требуется 2 токена', 'error');
+            return;
+        }
+        
+        // Отключаем кнопку и поле ввода
+        sendBtn.disabled = true;
+        input.disabled = true;
+        sendBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>';
+        
+        // Удаляем начальное сообщение, если есть
+        const initialMsg = chatMessages.querySelector('div[style*="text-align: center"]');
+        if (initialMsg) {
+            initialMsg.remove();
+        }
+        
+        // Добавляем сообщение пользователя
+        const userMsg = document.createElement('div');
+        userMsg.style.cssText = 'align-self: flex-end; max-width: 70%; padding: 10px 15px; background: linear-gradient(135deg, var(--accent) 0%, #667eea 100%); color: white; border-radius: 12px 12px 0 12px; font-size: 14px;';
+        userMsg.textContent = message;
+        chatMessages.appendChild(userMsg);
+        
+        // Прокрутка вниз
+        const container = document.getElementById('expert-chat-container');
+        container.scrollTop = container.scrollHeight;
+        
+        // Очищаем поле ввода
+        input.value = '';
+        
+        // Отправляем запрос
+        fetch('{{ url_for("expert_chat") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            credentials: 'include',
+            body: JSON.stringify({message: message})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Добавляем ответ эксперта
+                const expertMsg = document.createElement('div');
+                expertMsg.style.cssText = 'align-self: flex-start; max-width: 70%; padding: 10px 15px; background: var(--bg-tertiary); color: var(--text-primary); border-radius: 12px 12px 12px 0; font-size: 14px; border: 1px solid var(--border);';
+                expertMsg.textContent = data.reply;
+                chatMessages.appendChild(expertMsg);
+                
+                // Обновляем токены
+                tokensInfo.innerHTML = `Ваши токены: <strong style="color: var(--accent);">${data.tokens_remaining}</strong>`;
+                
+                // Прокрутка вниз
+                container.scrollTop = container.scrollHeight;
+            } else {
+                showNotification(data.message || 'Ошибка отправки сообщения', 'error');
+                // Удаляем сообщение пользователя при ошибке
+                userMsg.remove();
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка:', error);
+            showNotification('Ошибка соединения', 'error');
+            // Удаляем сообщение пользователя при ошибке
+            userMsg.remove();
+        })
+        .finally(() => {
+            // Включаем кнопку и поле ввода
+            sendBtn.disabled = false;
+            input.disabled = false;
+            sendBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle;"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>';
+            input.focus();
+        });
+    }
+    {% endif %}
+    
+    // Подтверждение email
+    {% if not current_user.email_verified %}
+    document.getElementById('verify-email-btn').addEventListener('click', async function() {
+        showLoading();
+        try {
+            const response = await fetch('{{ url_for("send_verification_code") }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify({email: '{{ current_user.email }}'})
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Код подтверждения отправлен на вашу почту', 'success');
+                // Запрашиваем код у пользователя
+                const code = prompt('Введите код подтверждения, отправленный на ' + '{{ current_user.email }}');
+                if (code) {
+                    showLoading();
+                    const verifyResponse = await fetch('{{ url_for("verify_email") }}', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        credentials: 'include',
+                        body: JSON.stringify({email: '{{ current_user.email }}', code: code})
+                    });
+                    const verifyResult = await verifyResponse.json();
+                    hideLoading();
+                    
+                    if (verifyResult.success) {
+                        showNotification('Email успешно подтвержден!', 'success');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        showNotification(verifyResult.message || 'Неверный код', 'error');
+                    }
+                }
+            } else {
+                showNotification(result.message || 'Ошибка отправки кода', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+    {% endif %}
+</script>
+{% endblock %}
+

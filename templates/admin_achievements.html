@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Управление достижениями - AI Бот{% endblock %}
+
+{% block content %}
+<div class="header">
+    <a href="{{ url_for('main') }}" class="btn-back">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 5px;">
+            <path d="M19 12H5M12 19l-7-7 7-7"/>
+        </svg>
+        Назад
+    </a>
+    <h2>Управление достижениями</h2>
+    <div></div>
+</div>
+
+<div class="container">
+    <div class="card mb-20">
+        <h3 class="card-title">Создать достижение</h3>
+        <form id="addAchievementForm">
+            <div class="form-group">
+                <label class="form-label">Название</label>
+                <input type="text" class="form-input" name="name" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Описание</label>
+                <textarea class="form-textarea" name="description" required></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Условие (perfect_quiz, first_quiz, ten_quizzes)</label>
+                <input type="text" class="form-input" name="condition" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Иконка (эмодзи или текст)</label>
+                <input type="text" class="form-input" name="icon" value="🏆">
+            </div>
+            <button type="submit" class="btn btn-primary btn-block">Создать достижение</button>
+        </form>
+    </div>
+    
+    <div class="card">
+        <h3 class="card-title">Список достижений</h3>
+        <div class="achievements-list">
+            {% for achievement in achievements %}
+            <div class="achievement-item" data-achievement-id="{{ achievement.id }}">
+                <div class="achievement-info">
+                    <div class="achievement-icon">{{ achievement.icon }}</div>
+                    <div>
+                        <h4>{{ achievement.name }}</h4>
+                        <p style="color: var(--text-secondary); margin: 5px 0;">{{ achievement.description }}</p>
+                        <small style="color: var(--text-secondary);">Условие: {{ achievement.condition }}</small>
+                    </div>
+                </div>
+                <div class="achievement-actions">
+                    <button class="btn btn-secondary edit-achievement" data-id="{{ achievement.id }}">Редактировать</button>
+                    <button class="btn btn-danger delete-achievement" data-id="{{ achievement.id }}">Удалить</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.achievement-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+}
+
+.achievement-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
+}
+
+.achievement-icon {
+    font-size: 32px;
+}
+
+.achievement-actions {
+    display: flex;
+    gap: 8px;
+}
+</style>
+
+<script>
+    // Создание достижения
+    document.getElementById('addAchievementForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData);
+        
+        showLoading();
+        try {
+            const response = await fetch('/api/admin/achievement', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                credentials: 'include',
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            hideLoading();
+            
+            if (result.success) {
+                showNotification('Достижение создано', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(result.message || 'Ошибка создания', 'error');
+            }
+        } catch (error) {
+            hideLoading();
+            showNotification('Ошибка соединения', 'error');
+        }
+    });
+    
+    // Удаление достижения
+    document.querySelectorAll('.delete-achievement').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const id = this.dataset.id;
+            if (!confirm('Удалить это достижение?')) return;
+            
+            showLoading();
+            try {
+                const response = await fetch(`/api/admin/achievement/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+                const result = await response.json();
+                hideLoading();
+                
+                if (result.success) {
+                    showNotification('Достижение удалено', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(result.message || 'Ошибка удаления', 'error');
+                }
+            } catch (error) {
+                hideLoading();
+                showNotification('Ошибка соединения', 'error');
+            }
+        });
+    });
+</script>
+{% endblock %}
+
